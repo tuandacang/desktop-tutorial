@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>XAU Scalp Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one trading desk — status strip, then tabbed workspaces (chart / signals / plan / sizing / journal) */
+:root{
+  --bg:#eef0f3; --panel:#ffffff; --ink:#1a1f2b; --muted:#5d6577; --line:#d7dbe3;
+  --gold:#a8790f; --gold-soft:#f3e7c7; --bull:#13805a; --bear:#c23a3a; --warn:#b26a00;
+  --f-display:"Archivo",system-ui,sans-serif; --f-body:"IBM Plex Sans",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111419; --panel:#191d25; --ink:#e7e9ee; --muted:#959cab; --line:#2a303b;
+  --gold:#e0b44a; --gold-soft:#3a3018; --bull:#3cc18c; --bear:#f06868; --warn:#f0a83c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111419; --panel:#191d25; --ink:#e7e9ee; --muted:#959cab; --line:#2a303b;
+  --gold:#e0b44a; --gold-soft:#3a3018; --bull:#3cc18c; --bear:#f06868; --warn:#f0a83c; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0}
+h1{font-size:1.6rem;font-weight:800;letter-spacing:-.01em}
+h2{font-size:1.1rem;font-weight:700}
+h3{font-size:.95rem;font-weight:700}
+.mono,td,.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+header.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.brand{display:flex;gap:12px;align-items:center}
+.ingot{width:38px;height:26px;background:linear-gradient(160deg,var(--gold),var(--gold-soft));clip-path:polygon(16% 0,84% 0,100% 100%,0 100%);flex:none}
+.sub{color:var(--muted);font-size:.85rem}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.strip>div{background:var(--panel);padding:12px 14px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.big{font-family:var(--f-mono);font-size:1.25rem;font-weight:500}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.82rem;padding:2px 10px;border-radius:99px;width:max-content}
+.pill.bull{background:color-mix(in srgb,var(--bull) 16%,transparent);color:var(--bull)}
+.pill.bear{background:color-mix(in srgb,var(--bear) 16%,transparent);color:var(--bear)}
+.pill.flat{background:color-mix(in srgb,var(--muted) 16%,transparent);color:var(--muted)}
+.pill.warn{background:color-mix(in srgb,var(--warn) 16%,transparent);color:var(--warn)}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button,.btn{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:7px 14px;border-radius:8px;cursor:pointer}
+button:hover,.btn:hover{border-color:var(--gold)}
+button.primary{background:var(--gold);border-color:var(--gold);color:var(--panel)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+nav.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{border:none;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);padding:10px 12px;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--gold)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+@media (max-width:860px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.chart{height:360px;width:100%;border-radius:6px;overflow:hidden}
+.chart.small{height:300px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+.tablebox{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+th{text-align:left;font-family:var(--f-body);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover,tbody tr.sel{background:var(--gold-soft)}
+.pos{color:var(--bull)} .neg{color:var(--bear)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;align-items:baseline}
+.kv dt{color:var(--muted);font-size:.82rem} .kv dd{margin:0;font-family:var(--f-mono);text-align:right}
+.steps{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:8px;counter-increment:s}
+.steps li::before{content:counter(s);font-family:var(--f-display);font-weight:800;color:var(--gold);font-size:1.2rem;line-height:1}
+.steps li.ok{border-color:var(--bull)}
+.steps .row{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.steps p{margin:4px 0 0;color:var(--muted);font-size:.86rem;max-width:65ch}
+.auto{font-size:.8rem;font-family:var(--f-mono);margin-top:6px}
+form.fields,.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);font-weight:500}
+input,select,textarea{font:inherit;font-family:var(--f-mono);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+textarea{font-family:var(--f-body);min-height:64px}
+.result{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+.result div{border-left:3px solid var(--gold);padding-left:10px}
+.note{font-size:.82rem;color:var(--muted);max-width:75ch}
+.callout{border:1px solid color-mix(in srgb,var(--warn) 45%,var(--line));background:color-mix(in srgb,var(--warn) 8%,var(--panel));border-radius:8px;padding:10px 14px;font-size:.84rem}
+.setupcard{border:1px solid var(--line);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px}
+details summary{cursor:pointer;font-weight:600}
+.ticket{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:flex;flex-direction:column;gap:14px}
+.ticket.on{border-color:var(--gold);box-shadow:0 0 0 3px color-mix(in srgb,var(--gold) 22%,transparent)}
+.ticket .head{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.ticket .side{font-family:var(--f-display);font-weight:800;font-size:1.5rem;letter-spacing:.02em}
+.ticket .side.bull{color:var(--bull)} .ticket .side.bear{color:var(--bear)}
+.levels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:560px){.levels{grid-template-columns:minmax(0,1fr)}}
+.lv{border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);min-width:0}
+.lv .v{font-family:var(--f-mono);font-size:1.7rem;font-weight:500;line-height:1.15;font-variant-numeric:tabular-nums}
+.lv .d{font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.lv.en{background:color-mix(in srgb,var(--ink) 5%,var(--panel))}
+.lv.sl{background:color-mix(in srgb,var(--bear) 9%,var(--panel));border-color:color-mix(in srgb,var(--bear) 35%,var(--line))} .lv.sl .v{color:var(--bear)}
+.lv.tp{background:color-mix(in srgb,var(--bull) 9%,var(--panel));border-color:color-mix(in srgb,var(--bull) 35%,var(--line))} .lv.tp .v{color:var(--bull)}
+.facts{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:.84rem;color:var(--muted)} .facts b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.live{background:var(--bull);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.35}}
+.flash-up{color:var(--bull)!important} .flash-dn{color:var(--bear)!important}
+code{font-family:var(--f-mono);background:var(--bg);padding:1px 5px;border-radius:4px;font-size:.85em}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="ingot" aria-hidden="true"></span>
+      <div><h1>XAU Scalp Desk</h1><div class="sub">Scalping XAUUSD theo cấu trúc M15 · POI · CHoCH + FVG trên M1</div></div>
+    </div>
+    <div class="bar">
+      <button id="btnLive" class="primary" type="button">● Bật giá trực tiếp</button>
+      <button id="btnDemo" type="button">Dữ liệu mẫu</button>
+      <label class="btn" for="csv">Nhập CSV từ MT5</label>
+      <input id="csv" type="file" accept=".csv,.txt" hidden>
+      <label class="f" for="pAdj" style="flex-direction:row;align-items:center;gap:6px">Bù chênh lệch (USD)<input id="pAdj" type="number" value="0" step="0.1" style="width:76px"></label>
+      <label class="f" for="srvOff" style="flex-direction:row;align-items:center;gap:6px">Giờ server MT5 UTC+<input id="srvOff" type="number" value="2" min="-12" max="14" style="width:58px"></label>
+    </div>
+  </header>
+
+  <div id="srcNote" class="callout"></div>
+  <div id="liveNote" class="callout" hidden></div>
+
+  <section class="ticket" id="ticket" aria-label="Lệnh theo chiến lược"></section>
+
+  <section class="strip" aria-label="Tình trạng hiện tại">
+    <div><span class="lbl">Giá <span id="sSrc">cuối</span></span><span id="sPrice" class="big">–</span><span id="sTime" class="muted mono" style="font-size:.75rem"></span></div>
+    <div><span class="lbl">Xu hướng M15</span><span id="sBias"></span><span id="sBiasNote" class="muted" style="font-size:.78rem"></span></div>
+    <div><span class="lbl">Trạng thái</span><span id="sState"></span><span id="sStateNote" class="muted" style="font-size:.78rem"></span></div>
+    <div><span class="lbl">Backtest</span><span id="sR" class="big">–</span><span id="sWin" class="muted" style="font-size:.78rem"></span></div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="chart" aria-selected="true">Biểu đồ</button>
+    <button role="tab" data-tab="signals" aria-selected="false">Tín hiệu &amp; Backtest</button>
+    <button role="tab" data-tab="plan" aria-selected="false">Quy trình 5 bước</button>
+    <button role="tab" data-tab="size" aria-selected="false">Tính khối lượng</button>
+    <button role="tab" data-tab="journal" aria-selected="false">Nhật ký</button>
+  </nav>
+
+  <!-- CHART -->
+  <section id="tab-chart" class="grid2">
+    <div class="panel" style="grid-column:1/-1">
+      <div class="bar" style="justify-content:space-between"><h2>TradingView · OANDA:XAUUSD</h2><span class="muted" style="font-size:.8rem">Giá tham chiếu trực tiếp</span></div>
+      <div id="tvBox" style="height:440px;border-radius:6px;overflow:hidden"></div>
+    </div>
+    <div class="panel">
+      <div class="bar" style="justify-content:space-between"><h2>M15 · cấu trúc &amp; POI</h2><span class="muted" style="font-size:.8rem">Bước 1–2</span></div>
+      <div id="chartH" class="chart"></div>
+      <div class="legend"><span><i style="background:var(--gold)"></i>PDH / PDL</span><span><i style="background:var(--bull)"></i>FVG tăng / hỗ trợ</span><span><i style="background:var(--bear)"></i>FVG giảm / kháng cự</span><span>▲▼ BOS / CHoCH</span></div>
+    </div>
+    <div class="panel">
+      <h2>Vùng POI đang hiệu lực</h2>
+      <div class="tablebox"><table><thead><tr><th>Loại</th><th>Vùng giá</th><th>Vai trò</th></tr></thead><tbody id="poiBody"></tbody></table></div>
+      <p class="note">PDH/PDL: đỉnh/đáy ngày hôm trước (ngày tính theo UTC, tức 07:00 giờ VN). FVG: khoảng trống giá 3 nến trên M15 chưa bị lấp. Hỗ trợ/kháng cự: hai đỉnh/đáy swing gần nhất.</p>
+    </div>
+    <div class="panel" style="grid-column:1/-1">
+      <div class="bar" style="justify-content:space-between"><h2 id="ltfTitle">M1 · điểm vào</h2><span class="muted" style="font-size:.8rem">Bước 3–4 · bấm một lệnh ở tab Tín hiệu để xem chi tiết</span></div>
+      <div id="chartL" class="chart"></div>
+      <div class="legend"><span>● chạm POI</span><span>▲▼ CHoCH + vào lệnh</span><span><i style="background:var(--ink)"></i>Entry</span><span><i style="background:var(--bear)"></i>SL</span><span><i style="background:var(--bull)"></i>TP</span></div>
+    </div>
+  </section>
+
+  <!-- SIGNALS -->
+  <section id="tab-signals" class="grid2" hidden>
+    <div class="panel">
+      <h2>Lệnh theo chiến lược</h2>
+      <div class="tablebox"><table><thead><tr><th>Thời gian (VN)</th><th>Hướng</th><th>POI</th><th>Entry</th><th>SL</th><th>TP</th><th>R:R</th><th>Kết quả</th><th>R</th></tr></thead><tbody id="sigBody"></tbody></table></div>
+    </div>
+    <div class="panel">
+      <h2>Thống kê backtest</h2>
+      <dl class="kv" id="statKv"></dl>
+      <div id="eqWrap"><span class="lbl">Đường vốn (R)</span><svg id="eq" viewBox="0 0 300 90" width="100%" height="90" role="img" aria-label="Đường vốn theo R"></svg></div>
+      <h3>Thông số</h3>
+      <div class="fields">
+        <label class="f" for="pRR">R:R tối thiểu<input id="pRR" type="number" step="0.5" min="1" value="2"></label>
+        <label class="f" for="pTol">Độ rộng vùng POI (× ATR M15)<input id="pTol" type="number" step="0.05" min="0" value="0.25"></label>
+        <label class="f" for="pSpread">Spread (USD)<input id="pSpread" type="number" step="0.05" min="0" value="0.3"></label>
+        <label class="f" for="pBuf">Đệm SL (USD)<input id="pBuf" type="number" step="0.1" min="0" value="0.3"></label>
+        <label class="f" for="pPend">Hủy lệnh chờ sau (nến)<input id="pPend" type="number" step="5" min="5" value="30"></label>
+        <label class="f" for="pBE">Dời SL về hòa vốn ở +1R<select id="pBE"><option value="1">Có</option><option value="0">Không</option></select></label>
+      </div>
+      <p class="note">Backtest giả định: khớp lệnh limit tại giữa FVG; nếu SL và TP cùng chạm trong một nến thì tính SL; spread trừ trực tiếp vào R.</p>
+    </div>
+  </section>
+
+  <!-- PLAN -->
+  <section id="tab-plan" class="grid2" hidden>
+    <div class="panel">
+      <div class="bar" style="justify-content:space-between"><h2>Checklist trước khi vào lệnh</h2><button id="resetCk" type="button">Làm lại</button></div>
+      <ol class="steps" id="steps"></ol>
+    </div>
+    <div class="panel">
+      <h2>Setup hiện tại</h2>
+      <div id="liveCard"></div>
+      <div class="callout"><b>Tránh vào lệnh quanh tin đỏ</b> (NFP, CPI, FOMC, JOLTS). Spread vàng có thể giãn 3–10 lần và giá quét cả hai phía trong vài giây.</div>
+      <p class="note">Phiên thanh khoản tốt cho XAUUSD: London và đầu phiên New York, khoảng 14:00–23:00 giờ Việt Nam.</p>
+    </div>
+  </section>
+
+  <!-- SIZE -->
+  <section id="tab-size" class="grid2" hidden>
+    <div class="panel">
+      <div class="bar" style="justify-content:space-between"><h2>Tính khối lượng lệnh</h2><button id="fromSetup" type="button">Lấy từ setup gần nhất</button></div>
+      <div class="fields">
+        <label class="f" for="zBal">Vốn tài khoản (USD)<input id="zBal" type="number" value="1000" min="0"></label>
+        <label class="f" for="zRisk">Rủi ro mỗi lệnh (%)<input id="zRisk" type="number" value="1" step="0.25" min="0"></label>
+        <label class="f" for="zDir">Hướng<select id="zDir"><option value="1">Mua (Buy)</option><option value="-1">Bán (Sell)</option></select></label>
+        <label class="f" for="zEntry">Entry<input id="zEntry" type="number" step="0.01" value="3950.00"></label>
+        <label class="f" for="zSL">Stop loss<input id="zSL" type="number" step="0.01" value="3947.50"></label>
+        <label class="f" for="zTP">Take profit<input id="zTP" type="number" step="0.01" value="3956.00"></label>
+        <label class="f" for="zCS">Hợp đồng (oz / 1 lot)<input id="zCS" type="number" value="100" min="1"></label>
+      </div>
+      <div class="result" id="zOut"></div>
+    </div>
+    <div class="panel">
+      <h2>Cách tính</h2>
+      <p class="note">Với XAUUSD, 1 lot chuẩn = 100 oz, nên giá đi 1 USD thì 1 lot lãi/lỗ 100 USD. Khối lượng = Số tiền rủi ro ÷ (Khoảng cách SL × 100). Kiểm tra lại kích thước hợp đồng trên sàn của bạn, một số sàn dùng 1 lot = 10 oz hoặc 1 oz.</p>
+      <p class="note">Ví dụ: vốn 1.000 USD, rủi ro 1% = 10 USD, SL cách 2,5 USD → 10 ÷ 250 = 0,04 lot.</p>
+    </div>
+  </section>
+
+  <!-- JOURNAL -->
+  <section id="tab-journal" class="grid2" hidden>
+    <div class="panel">
+      <h2>Nhật ký giao dịch</h2>
+      <div class="tablebox"><table><thead><tr><th>Ngày</th><th>Hướng</th><th>POI</th><th>Entry</th><th>SL</th><th>TP</th><th>R</th><th>Ghi chú</th><th></th></tr></thead><tbody id="jBody"></tbody></table></div>
+      <dl class="kv" id="jStats"></dl>
+      <p class="note">Nhật ký lưu trong trình duyệt này. Xóa dữ liệu trình duyệt sẽ mất nhật ký.</p>
+    </div>
+    <form class="panel" id="jForm">
+      <h2>Thêm lệnh</h2>
+      <div class="fields">
+        <label class="f" for="jDate">Ngày giờ<input id="jDate" type="datetime-local" required></label>
+        <label class="f" for="jDir">Hướng<select id="jDir"><option>Buy</option><option>Sell</option></select></label>
+        <label class="f" for="jPoi">POI<select id="jPoi"><option>PDH/PDL</option><option>FVG</option><option>Hỗ trợ/Kháng cự</option></select></label>
+        <label class="f" for="jEntry">Entry<input id="jEntry" type="number" step="0.01" required></label>
+        <label class="f" for="jSL">SL<input id="jSL" type="number" step="0.01" required></label>
+        <label class="f" for="jTP">TP<input id="jTP" type="number" step="0.01"></label>
+        <label class="f" for="jR">Kết quả (R)<input id="jR" type="number" step="0.1" placeholder="vd: 2 hoặc -1" required></label>
+      </div>
+      <label class="f" for="jNote">Ghi chú / bài học<textarea id="jNote" placeholder="Có đủ 5 bước không? Vào lệnh có vội không?"></textarea></label>
+      <div class="bar"><button class="primary" type="submit">Lưu vào nhật ký</button><span id="jMsg" class="muted"></span></div>
+    </form>
+  </section>
+
+  <p class="note">Công cụ chỉ phân tích và gợi ý theo quy tắc, không đặt lệnh và không phải lời khuyên đầu tư. Kết quả backtest trên dữ liệu quá khứ không đảm bảo kết quả tương lai.</p>
+</div>
+
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+// ===== Engine: SMC scalping (M15 structure + POI, LTF CHoCH + FVG entry) =====
+const Engine = (() => {
+  function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+  function demoBars(seed = 7, days = 3, start = 3940) {
+    const rnd = mulberry32(seed);
+    const gauss = () => { let u = 0, v = 0; while (!u) u = rnd(); while (!v) v = rnd(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+    const t0 = Date.UTC(2026, 10, 3, 0, 0) / 1000;
+    const n = days * 1440, bars = [];
+    let p = start, drift = 0, vol = 0.32, regimeLeft = 0;
+    for (let i = 0; i < n; i++) {
+      if (regimeLeft-- <= 0) { drift = (rnd() - 0.5) * 0.09; regimeLeft = 120 + Math.floor(rnd() * 360); }
+      const hourUTC = Math.floor((i % 1440) / 60);
+      const sess = (hourUTC >= 7 && hourUTC < 17) ? 1.35 : (hourUTC >= 22 || hourUTC < 1) ? 0.55 : 0.85;
+      vol = 0.94 * vol + 0.06 * 0.32 + (rnd() < 0.004 ? 1.2 : 0);
+      const o = p;
+      const steps = 4; let h = o, l = o, c = o;
+      for (let s = 0; s < steps; s++) { c += drift / steps + gauss() * vol * sess / 2; h = Math.max(h, c); l = Math.min(l, c); }
+      h += Math.abs(gauss()) * 0.12 * sess; l -= Math.abs(gauss()) * 0.12 * sess;
+      bars.push({ time: t0 + i * 60, open: r2(o), high: r2(h), low: r2(l), close: r2(c) });
+      p = c;
+    }
+    return bars;
+  }
+  const r2 = x => Math.round(x * 100) / 100;
+
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    const out = [];
+    for (const line of lines) {
+      const tk = line.replace(/[<>"]/g, '').split(/[\t,;]+|\s{2,}/).map(s => s.trim()).filter(Boolean);
+      if (tk.length < 5) continue;
+      let dt, k;
+      const isDate = s => /^\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}/.test(s) || /^\d{1,2}[.\-/]\d{1,2}[.\-/]\d{4}/.test(s);
+      if (isDate(tk[0]) && /\d{1,2}:\d{2}/.test(tk[0])) { dt = tk[0]; k = 1; }
+      else if (isDate(tk[0]) && /^\d{1,2}:\d{2}/.test(tk[1])) { dt = tk[0] + ' ' + tk[1]; k = 2; }
+      else if (/^\d{10,13}$/.test(tk[0])) { dt = tk[0]; k = 1; }
+      else continue;
+      const nums = tk.slice(k, k + 4).map(Number);
+      if (nums.some(x => !isFinite(x))) continue;
+      const t = toUnix(dt);
+      if (!isFinite(t)) continue;
+      const [o, h, l, c] = nums;
+      out.push({ time: t, open: o, high: Math.max(h, o, c), low: Math.min(l, o, c), close: c });
+    }
+    out.sort((a, b) => a.time - b.time);
+    const dedup = [];
+    for (const b of out) if (!dedup.length || dedup[dedup.length - 1].time !== b.time) dedup.push(b);
+    return dedup;
+  }
+  function toUnix(s) {
+    if (/^\d{10,13}$/.test(s)) { const n = Number(s); return n > 1e12 ? Math.floor(n / 1000) : n; }
+    let m = s.match(/^(\d{4})[.\-/](\d{1,2})[.\-/](\d{1,2})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (m) return Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) / 1000;
+    m = s.match(/^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})[ T]?(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+    if (m) return Date.UTC(+m[3], +m[2] - 1, +m[1], +m[4], +m[5], +(m[6] || 0)) / 1000;
+    return NaN;
+  }
+
+  function timeframeSec(bars) {
+    const d = [];
+    for (let i = 1; i < Math.min(bars.length, 500); i++) d.push(bars[i].time - bars[i - 1].time);
+    d.sort((a, b) => a - b);
+    return d.length ? d[Math.floor(d.length / 2)] : 60;
+  }
+
+  function aggregate(bars, sec) {
+    const out = []; let cur = null;
+    for (const b of bars) {
+      const t = Math.floor(b.time / sec) * sec;
+      if (!cur || cur.time !== t) { cur && out.push(cur); cur = { time: t, open: b.open, high: b.high, low: b.low, close: b.close }; }
+      else { cur.high = Math.max(cur.high, b.high); cur.low = Math.min(cur.low, b.low); cur.close = b.close; }
+    }
+    cur && out.push(cur);
+    return out;
+  }
+
+  function atr(bars, n = 14) {
+    const out = new Array(bars.length).fill(0); let a = 0;
+    for (let i = 0; i < bars.length; i++) {
+      const b = bars[i], pc = i ? bars[i - 1].close : b.open;
+      const tr = Math.max(b.high - b.low, Math.abs(b.high - pc), Math.abs(b.low - pc));
+      a = i < n ? (a * i + tr) / (i + 1) : (a * (n - 1) + tr) / n;
+      out[i] = a;
+    }
+    return out;
+  }
+
+  // Pivot swings; a swing at i is only known at i + n (confirmIdx)
+  function swings(bars, n = 2) {
+    const hs = [], ls = [];
+    for (let i = n; i < bars.length - n; i++) {
+      let isH = true, isL = true;
+      for (let k = 1; k <= n; k++) {
+        if (bars[i].high < bars[i - k].high || bars[i].high <= bars[i + k].high) isH = false;
+        if (bars[i].low > bars[i - k].low || bars[i].low >= bars[i + k].low) isL = false;
+      }
+      if (isH) hs.push({ idx: i, confirm: i + n, price: bars[i].high, time: bars[i].time });
+      if (isL) ls.push({ idx: i, confirm: i + n, price: bars[i].low, time: bars[i].time });
+    }
+    return { hs, ls };
+  }
+
+  // Market structure on HTF: bias after each bar (1 bull, -1 bear, 0 none) + BOS events
+  function structure(htf, n = 2) {
+    const { hs, ls } = swings(htf, n);
+    const bias = new Array(htf.length).fill(0), events = [];
+    let b = 0, hi = null, lo = null, hp = 0, lp = 0, brokeH = null, brokeL = null;
+    for (let i = 0; i < htf.length; i++) {
+      while (hp < hs.length && hs[hp].confirm <= i) hi = hs[hp++];
+      while (lp < ls.length && ls[lp].confirm <= i) lo = ls[lp++];
+      const c = htf[i].close;
+      if (hi && hi !== brokeH && c > hi.price) { events.push({ time: htf[i].time, dir: 1, kind: b === -1 ? 'CHoCH' : 'BOS', level: hi.price }); b = 1; brokeH = hi; }
+      else if (lo && lo !== brokeL && c < lo.price) { events.push({ time: htf[i].time, dir: -1, kind: b === 1 ? 'CHoCH' : 'BOS', level: lo.price }); b = -1; brokeL = lo; }
+      bias[i] = b;
+    }
+    return { bias, events, hs, ls };
+  }
+
+  function mirror(bars) { return bars.map(b => ({ time: b.time, open: -b.open, high: -b.low, low: -b.high, close: -b.close })); }
+
+  // POIs for the bull side ("demand" below price, "supply" targets above), known at HTF index i
+  function poiBuilder(ltf, htf, htfAtr, sw) {
+    // previous-day high/low by UTC day from LTF
+    const days = new Map();
+    for (const b of ltf) {
+      const d = Math.floor(b.time / 86400);
+      const x = days.get(d); if (!x) days.set(d, { h: b.high, l: b.low }); else { x.h = Math.max(x.h, b.high); x.l = Math.min(x.l, b.low); }
+    }
+    // HTF FVGs with lifecycle
+    const fvgs = [];
+    for (let i = 2; i < htf.length; i++) {
+      const a = htf[i - 2], c = htf[i];
+      const minGap = 0.15 * (htfAtr[i] || 1);
+      if (c.low - a.high >= minGap) fvgs.push({ dir: 1, bottom: a.high, top: c.low, born: i, time: htf[i - 1].time, dead: Infinity });
+      if (a.low - c.high >= minGap) fvgs.push({ dir: -1, bottom: c.high, top: a.low, born: i, time: htf[i - 1].time, dead: Infinity });
+    }
+    for (const f of fvgs) for (let j = f.born + 1; j < htf.length; j++) {
+      if (f.dir === 1 && htf[j].low < f.bottom) { f.dead = j; break; }
+      if (f.dir === -1 && htf[j].high > f.top) { f.dead = j; break; }
+    }
+    return function at(i) {
+      const t = htf[i].time, d = Math.floor(t / 86400), pd = days.get(d - 1);
+      const demand = [], supply = [];
+      if (pd) { demand.push({ kind: 'PDL', bottom: pd.l, top: pd.l }); supply.push({ kind: 'PDH', bottom: pd.h, top: pd.h }); }
+      for (const f of fvgs) if (f.born <= i && f.dead > i && i - f.born < 96) (f.dir === 1 ? demand : supply).push({ kind: 'FVG', bottom: f.bottom, top: f.top, time: f.time });
+      const lastL = sw.ls.filter(s => s.confirm <= i).slice(-2), lastH = sw.hs.filter(s => s.confirm <= i).slice(-2);
+      for (const s of lastL) demand.push({ kind: 'Hỗ trợ', bottom: s.price, top: s.price, time: s.time });
+      for (const s of lastH) supply.push({ kind: 'Kháng cự', bottom: s.price, top: s.price, time: s.time });
+      return { demand, supply };
+    };
+  }
+
+  // Bull-side setup finder on (possibly mirrored) data
+  function findLongs(ltf, htf, biasArr, p) {
+    const htfAtr = atr(htf), ltfAtr = atr(ltf);
+    const sw = swings(htf, 2), lsw = swings(ltf, 2);
+    const poiAt = poiBuilder(ltf, htf, htfAtr, sw);
+    const htfSec = htf.length > 1 ? htf[1].time - htf[0].time : 900;
+    const setups = [], taps = [];
+    let hi = 0, armed = null, pending = null, trade = null, lastHtf = -1, pois = null, cooldown = 0;
+    let lhp = 0; const knownHighs = [];
+    for (let j = 0; j < ltf.length; j++) {
+      const b = ltf[j];
+      while (lhp < lsw.hs.length && lsw.hs[lhp].confirm <= j) knownHighs.push(lsw.hs[lhp++]);
+      // last fully closed HTF bar before this LTF bar
+      while (hi + 1 < htf.length && htf[hi + 1].time + htfSec <= b.time) hi++;
+      const closedOk = htf[hi] && htf[hi].time + htfSec <= b.time;
+      if (!closedOk) continue;
+      if (hi !== lastHtf) { pois = poiAt(hi); lastHtf = hi; }
+      const bias = biasArr[hi], tol = p.tolMult * (htfAtr[hi] || 1);
+
+      if (trade) { // manage open trade
+        const t = trade;
+        const slHit = b.low <= t.sl, tpHit = b.high >= t.tp;
+        if (slHit) { t.exitTime = b.time; t.exit = t.sl; t.outcome = t.sl >= t.entry ? 'BE' : 'SL'; }
+        else if (tpHit) { t.exitTime = b.time; t.exit = t.tp; t.outcome = 'TP'; }
+        else if (p.be && !t.beMoved && b.high >= t.entry + t.risk) { t.sl = t.entry; t.beMoved = true; }
+        if (t.outcome) {
+          const cost = p.spread / t.risk;
+          t.r = (t.exit - t.entry) / t.risk - cost;
+          setups.push(t); trade = null; cooldown = 5;
+        }
+        continue;
+      }
+      if (pending) {
+        if (b.low <= pending.entry) {
+          trade = { ...pending, fillTime: b.time, status: 'filled' };
+          if (b.low <= trade.sl) { trade.exitTime = b.time; trade.exit = trade.sl; trade.outcome = 'SL'; trade.r = -1 - p.spread / trade.risk; setups.push(trade); trade = null; cooldown = 5; }
+          pending = null; continue;
+        }
+        if (b.high >= pending.tp || j - pending.j > p.pendingBars) { setups.push({ ...pending, outcome: 'Hủy', r: 0 }); pending = null; }
+        continue;
+      }
+      if (cooldown > 0) { cooldown--; continue; }
+      if (bias !== 1) { armed = null; continue; }
+
+      if (!armed) {
+        const hit = pois.demand.find(z => b.low <= z.top + tol && b.high >= z.bottom - tol && b.close >= z.bottom - 2 * tol);
+        if (hit) { armed = { j, time: b.time, zone: hit, low: b.low, lowJ: j }; taps.push({ time: b.time, price: b.low, zone: hit.kind }); }
+        continue;
+      }
+      // armed: track sweep low, wait for CHoCH
+      if (b.low < armed.low) { armed.low = b.low; armed.lowJ = j; }
+      if (b.close < armed.zone.bottom - 2 * tol || j - armed.j > p.armBars) { armed = null; continue; }
+      const ref = [...knownHighs].reverse().find(h => h.idx < j && h.idx >= armed.j - 40 && h.idx < armed.lowJ + 1) || null;
+      if (ref && b.close > ref.price && armed.lowJ < j) {
+        // CHoCH confirmed: find the newest bull FVG in the displacement leg
+        let fvg = null;
+        for (let k = j; k >= Math.max(armed.lowJ + 2, 2); k--) {
+          const a = ltf[k - 2], c = ltf[k];
+          if (c.low - a.high >= 0.05 * (ltfAtr[k] || 0.1)) { fvg = { bottom: a.high, top: c.low, time: ltf[k - 1].time }; break; }
+        }
+        if (!fvg) { armed = null; continue; }
+        const entry = r2((fvg.top + fvg.bottom) / 2);
+        const sl = r2(armed.low - p.buffer);
+        const risk = entry - sl;
+        if (risk <= 0.2) { armed = null; continue; }
+        const targets = pois.supply.map(z => z.bottom).filter(x => x > entry + risk).sort((a, b) => a - b);
+        let tp = targets.find(x => (x - entry) / risk >= p.minRR);
+        let tpKind = tp != null ? (pois.supply.find(z => z.bottom === tp) || {}).kind : null;
+        if (tp == null) { armed = null; continue; }
+        tp = r2(tp);
+        pending = { j, time: b.time, tapTime: armed.time, zone: armed.zone.kind, chochTime: b.time, chochLevel: ref.price, fvg, entry, sl, initSl: sl, tp, tpKind, risk, rr: (tp - entry) / risk, status: 'pending' };
+        armed = null;
+      }
+    }
+    const live = trade ? { ...trade } : pending ? { ...pending } : null;
+    const liveArmed = armed ? { tapTime: armed.time, zone: armed.zone.kind, low: armed.low } : null;
+    return { setups, taps, live, liveArmed };
+  }
+
+  function unmirrorSetup(s) {
+    const o = { ...s, dir: -1 };
+    for (const k of ['entry', 'sl', 'initSl', 'tp', 'exit', 'chochLevel']) if (o[k] != null) o[k] = -o[k];
+    if (o.fvg) o.fvg = { top: -s.fvg.bottom, bottom: -s.fvg.top, time: s.fvg.time };
+    return o;
+  }
+
+  function run(ltfRaw, params) {
+    const p = Object.assign({ minRR: 2, tolMult: 0.25, be: true, spread: 0.3, buffer: 0.3, pendingBars: 30, armBars: 90 }, params || {});
+    const ltf = ltfRaw;
+    const htf = aggregate(ltf, 900);
+    const st = structure(htf);
+    const long = findLongs(ltf, htf, st.bias, p);
+    const mL = mirror(ltf), mH = mirror(htf);
+    const shortBias = st.bias.map(x => -x);
+    const short = findLongs(mL, mH, shortBias, p);
+    const setups = [...long.setups.map(s => ({ ...s, dir: 1 })), ...short.setups.map(unmirrorSetup)].sort((a, b) => a.time - b.time);
+    const taps = [...long.taps.map(t => ({ ...t, dir: 1 })), ...short.taps.map(t => ({ ...t, price: -t.price, dir: -1 }))];
+    let live = long.live ? { ...long.live, dir: 1 } : short.live ? unmirrorSetup(short.live) : null;
+    let liveArmed = long.liveArmed ? { ...long.liveArmed, dir: 1 } : short.liveArmed ? { ...short.liveArmed, low: -short.liveArmed.low, dir: -1 } : null;
+    // current POIs for display (original orientation)
+    const htfAtr = atr(htf), sw = swings(htf, 2);
+    const poiNow = poiBuilder(ltf, htf, htfAtr, sw)(htf.length - 1);
+    const trades = setups.filter(s => s.outcome && s.outcome !== 'Hủy');
+    const wins = trades.filter(t => t.r > 0).length;
+    const totalR = trades.reduce((a, t) => a + t.r, 0);
+    let peak = 0, eq = 0, dd = 0; for (const t of trades) { eq += t.r; peak = Math.max(peak, eq); dd = Math.min(dd, eq - peak); }
+    return {
+      ltf, htf, structure: st, setups, taps, live, liveArmed, poiNow, params: p,
+      stats: { trades: trades.length, wins, winRate: trades.length ? wins / trades.length : 0, totalR, maxDD: dd, cancelled: setups.length - trades.length, avgR: trades.length ? totalR / trades.length : 0 },
+      bias: st.bias[st.bias.length - 1]
+    };
+  }
+
+  return { demoBars, parseCSV, timeframeSec, aggregate, run };
+})();
+
+</script>
+<script>
+(() => {
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 2) => x == null || !isFinite(x) ? '–' : Number(x).toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+const VN = 7 * 3600; // hiển thị giờ Việt Nam
+const tstr = t => { const s = new Date((t + VN) * 1000).toISOString(); return s.slice(8, 10) + '/' + s.slice(5, 7) + ' ' + s.slice(11, 16); };
+const sh = arr => arr.map(b => ({ ...b, time: b.time + VN }));
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let bars = [], res = null, source = 'demo', ltfLabel = 'M1', selected = null;
+let chH, chL, sH, sL, linesH = [], linesL = [];
+
+function params() {
+  return { minRR: +$('pRR').value || 2, tolMult: +$('pTol').value || 0, spread: +$('pSpread').value || 0, buffer: +$('pBuf').value || 0, pendingBars: +$('pPend').value || 30, be: $('pBE').value === '1' };
+}
+
+function makeCharts() {
+  const LW = window.LightweightCharts;
+  if (!LW) { $('chartH').textContent = $('chartL').textContent = 'Không tải được thư viện biểu đồ.'; return; }
+  const opt = () => ({
+    layout: { background: { color: css('--panel') }, textColor: css('--muted'), fontFamily: 'IBM Plex Mono, monospace' },
+    grid: { vertLines: { color: css('--line') }, horzLines: { color: css('--line') } },
+    rightPriceScale: { borderColor: css('--line') },
+    timeScale: { borderColor: css('--line'), timeVisible: true, secondsVisible: false },
+    crosshair: { mode: 0 }, autoSize: true
+  });
+  const so = () => ({ upColor: css('--bull'), downColor: css('--bear'), wickUpColor: css('--bull'), wickDownColor: css('--bear'), borderVisible: false });
+  chH = LW.createChart($('chartH'), opt()); sH = chH.addCandlestickSeries(so());
+  chL = LW.createChart($('chartL'), opt()); sL = chL.addCandlestickSeries(so());
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    setTimeout(() => { chH.applyOptions(opt()); chL.applyOptions(opt()); sH.applyOptions(so()); sL.applyOptions(so()); drawCharts(); }, 50);
+  });
+}
+
+function priceLine(series, store, price, color, title, style = 0) {
+  store.push(series.createPriceLine({ price, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true, title }));
+}
+function clearLines(series, store) { while (store.length) series.removePriceLine(store.pop()); }
+
+function drawCharts() {
+  if (!sH || !res) return;
+  sH.setData(sh(res.htf));
+  clearLines(sH, linesH);
+  const p = res.poiNow;
+  for (const z of p.supply) {
+    const c = z.kind === 'PDH' ? css('--gold') : css('--bear');
+    if (z.kind === 'FVG') { priceLine(sH, linesH, z.top, c, 'FVG↓', 2); priceLine(sH, linesH, z.bottom, c, '', 2); }
+    else priceLine(sH, linesH, z.top, c, z.kind === 'PDH' ? 'PDH' : 'KC', z.kind === 'PDH' ? 0 : 1);
+  }
+  for (const z of p.demand) {
+    const c = z.kind === 'PDL' ? css('--gold') : css('--bull');
+    if (z.kind === 'FVG') { priceLine(sH, linesH, z.top, c, 'FVG↑', 2); priceLine(sH, linesH, z.bottom, c, '', 2); }
+    else priceLine(sH, linesH, z.top, c, z.kind === 'PDL' ? 'PDL' : 'HT', z.kind === 'PDL' ? 0 : 1);
+  }
+  sH.setMarkers(res.structure.events.map(e => ({ time: e.time + VN, position: e.dir > 0 ? 'belowBar' : 'aboveBar', color: e.dir > 0 ? css('--bull') : css('--bear'), shape: e.dir > 0 ? 'arrowUp' : 'arrowDown', text: e.kind })));
+  chH.timeScale().fitContent();
+
+  sL.setData(sh(res.ltf));
+  const mk = [];
+  for (const t of res.taps) mk.push({ time: t.time + VN, position: t.dir > 0 ? 'belowBar' : 'aboveBar', color: css('--gold'), shape: 'circle', size: 0.6 });
+  for (const s of res.setups) mk.push({ time: s.time + VN, position: s.dir > 0 ? 'belowBar' : 'aboveBar', color: s.dir > 0 ? css('--bull') : css('--bear'), shape: s.dir > 0 ? 'arrowUp' : 'arrowDown', text: s.outcome === 'Hủy' ? 'hủy' : (s.dir > 0 ? 'BUY' : 'SELL') });
+  if (res.live) mk.push({ time: res.live.time + VN, position: res.live.dir > 0 ? 'belowBar' : 'aboveBar', color: css('--gold'), shape: res.live.dir > 0 ? 'arrowUp' : 'arrowDown', text: 'MỚI' });
+  mk.sort((a, b) => a.time - b.time);
+  sL.setMarkers(mk);
+  showSetup(selected ?? res.live ?? null, false);
+}
+
+function showSetup(s, scroll = true) {
+  if (!sL) return;
+  clearLines(sL, linesL);
+  if (!s) { chL.timeScale().setVisibleLogicalRange({ from: res.ltf.length - 240, to: res.ltf.length + 5 }); return; }
+  priceLine(sL, linesL, s.entry, css('--ink'), 'ENTRY');
+  priceLine(sL, linesL, s.initSl ?? s.sl, css('--bear'), 'SL');
+  priceLine(sL, linesL, s.tp, css('--bull'), 'TP');
+  const i = res.ltf.findIndex(b => b.time >= s.time);
+  const endT = s.exitTime || s.time; const k = res.ltf.findIndex(b => b.time >= endT);
+  const from = Math.max(0, i - 90), to = Math.min(res.ltf.length + 5, Math.max(k, i) + 60);
+  chL.timeScale().setVisibleLogicalRange({ from, to });
+  if (scroll) $('chartL').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function biasPill(b) { return b > 0 ? '<span class="pill bull">▲ Tăng</span>' : b < 0 ? '<span class="pill bear">▼ Giảm</span>' : '<span class="pill flat">Chưa rõ</span>'; }
+
+function renderStrip() {
+  const last = res.ltf[res.ltf.length - 1];
+  $('sPrice').textContent = fmt(last.close);
+  $('sTime').textContent = tstr(last.time) + ' giờ VN';
+  $('sBias').innerHTML = biasPill(res.bias);
+  const ev = res.structure.events.at(-1);
+  $('sBiasNote').textContent = ev ? `${ev.kind} ${ev.dir > 0 ? 'lên' : 'xuống'} qua ${fmt(ev.level)} lúc ${tstr(ev.time)}` : 'Chưa có phá vỡ cấu trúc';
+  const L = res.live, A = res.liveArmed;
+  if (L && L.status === 'filled') { $('sState').innerHTML = '<span class="pill warn">Đang có lệnh</span>'; $('sStateNote').textContent = `${L.dir > 0 ? 'Buy' : 'Sell'} ${fmt(L.entry)} · SL ${fmt(L.sl)} · TP ${fmt(L.tp)}`; }
+  else if (L) { $('sState').innerHTML = '<span class="pill warn">Lệnh chờ</span>'; $('sStateNote').textContent = `${L.dir > 0 ? 'Buy limit' : 'Sell limit'} ${fmt(L.entry)}`; }
+  else if (A) { $('sState').innerHTML = '<span class="pill flat">Đã chạm POI</span>'; $('sStateNote').textContent = `Chờ CHoCH ${A.dir > 0 ? 'lên' : 'xuống'} trên ${ltfLabel} (${A.zone})`; }
+  else { $('sState').innerHTML = '<span class="pill flat">Chờ giá về POI</span>'; $('sStateNote').textContent = 'Chưa có setup'; }
+  const s = res.stats;
+  $('sR').innerHTML = `<span class="${s.totalR >= 0 ? 'pos' : 'neg'}">${s.totalR >= 0 ? '+' : ''}${fmt(s.totalR, 1)}R</span>`;
+  $('sWin').textContent = `${s.trades} lệnh · thắng ${fmt(s.winRate * 100, 0)}%`;
+}
+
+function renderPOI() {
+  const last = res.ltf.at(-1).close;
+  const rows = [...res.poiNow.supply.map(z => ({ ...z, role: 'Cung / mục tiêu Buy', c: 'neg' })), ...res.poiNow.demand.map(z => ({ ...z, role: 'Cầu / mục tiêu Sell', c: 'pos' }))]
+    .sort((a, b) => b.top - a.top);
+  $('poiBody').innerHTML = rows.map(z => `<tr><td>${z.kind}</td><td class="${z.c}">${z.top === z.bottom ? fmt(z.top) : fmt(z.bottom) + ' – ' + fmt(z.top)}</td><td style="font-family:var(--f-body)">${z.role}</td></tr>`).join('')
+    + `<tr><td colspan="3" class="muted">Giá hiện tại ${fmt(last)}</td></tr>`;
+}
+
+function renderSignals() {
+  const list = [...res.setups].reverse();
+  if (!list.length) { $('sigBody').innerHTML = '<tr><td colspan="9" class="muted">Chưa có setup đủ điều kiện. Thử giảm R:R tối thiểu hoặc nạp thêm dữ liệu.</td></tr>'; }
+  else $('sigBody').innerHTML = list.map((s, i) => {
+    const out = s.outcome === 'TP' ? '<span class="pill bull">TP</span>' : s.outcome === 'SL' ? '<span class="pill bear">SL</span>' : s.outcome === 'BE' ? '<span class="pill flat">Hòa vốn</span>' : '<span class="pill flat">Hủy</span>';
+    return `<tr data-i="${res.setups.length - 1 - i}"><td>${tstr(s.time)}</td><td class="${s.dir > 0 ? 'pos' : 'neg'}">${s.dir > 0 ? 'Buy' : 'Sell'}</td><td style="font-family:var(--f-body)">${s.zone}</td><td>${fmt(s.entry)}</td><td>${fmt(s.initSl ?? s.sl)}</td><td>${fmt(s.tp)}</td><td>${fmt(s.rr, 1)}</td><td>${out}</td><td class="${s.r > 0 ? 'pos' : s.r < 0 ? 'neg' : ''}">${s.outcome === 'Hủy' ? '–' : (s.r > 0 ? '+' : '') + fmt(s.r, 2)}</td></tr>`;
+  }).join('');
+  const s = res.stats;
+  $('statKv').innerHTML = [
+    ['Số lệnh khớp', s.trades], ['Lệnh chờ bị hủy', s.cancelled], ['Tỷ lệ thắng', fmt(s.winRate * 100, 0) + '%'],
+    ['Tổng lợi nhuận', (s.totalR >= 0 ? '+' : '') + fmt(s.totalR, 2) + 'R'], ['Trung bình / lệnh', fmt(s.avgR, 2) + 'R'], ['Sụt giảm lớn nhất', fmt(s.maxDD, 2) + 'R'],
+    ['Số nến ' + ltfLabel, res.ltf.length.toLocaleString('en-US')]
+  ].map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  drawEquity();
+}
+
+function drawEquity() {
+  const tr = res.setups.filter(s => s.outcome && s.outcome !== 'Hủy');
+  const pts = [0]; for (const t of tr) pts.push(pts.at(-1) + t.r);
+  const W = 300, H = 90, pad = 8, mn = Math.min(0, ...pts), mx = Math.max(0, ...pts), rg = (mx - mn) || 1;
+  const X = i => pad + (W - 2 * pad) * (pts.length > 1 ? i / (pts.length - 1) : 0), Y = v => H - pad - (H - 2 * pad) * (v - mn) / rg;
+  const d = pts.map((v, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join('');
+  const end = pts.at(-1), col = end >= 0 ? 'var(--bull)' : 'var(--bear)';
+  $('eq').innerHTML = `<line x1="${pad}" x2="${W - pad}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="3 3"/>
+    <path d="${d}L${X(pts.length - 1)},${Y(0)}L${X(0)},${Y(0)}Z" fill="${col}" fill-opacity=".12" stroke="none"/>
+    <path d="${d}" fill="none" stroke="${col}" stroke-width="1.8"/>
+    <circle cx="${X(pts.length - 1)}" cy="${Y(end)}" r="3.2" fill="${col}"/>
+    <text x="${W - pad}" y="${Math.max(12, Y(end) - 6)}" text-anchor="end" font-size="10" fill="var(--muted)" font-family="IBM Plex Mono, monospace">${end >= 0 ? '+' : ''}${fmt(end, 1)}R</text>`;
+}
+
+// ---- Checklist (step 1-5) ----
+const STEPS = [
+  ['Xác định xu hướng M15', 'Chỉ Buy khi cấu trúc M15 tăng (đỉnh sau cao hơn, đáy sau cao hơn), chỉ Sell khi cấu trúc giảm.'],
+  ['Đánh dấu POI', 'Đỉnh/đáy ngày hôm trước, FVG M15 chưa bị lấp, hỗ trợ/kháng cự từ swing gần nhất.'],
+  ['Chờ giá phản ứng tại POI', 'Không vào lệnh chỉ vì giá chạm vùng. Đợi giá quét qua rồi có dấu hiệu từ chối.'],
+  ['Vào lệnh trên M1: CHoCH + FVG', 'Giá phá đỉnh (Buy) hoặc đáy (Sell) gần nhất trên M1, để lại FVG. Đặt lệnh limit tại FVG, SL ngoài đáy/đỉnh vừa quét.'],
+  ['Quản lý lệnh và ghi nhật ký', 'Rủi ro tối đa 1% vốn. Dời SL về hòa vốn khi đạt +1R. Chốt lời tại POI đối diện. Ghi lại mọi lệnh.']
+];
+let ck = [false, false, false, false, false];
+try { const v = JSON.parse(localStorage.getItem('xau-ck') || 'null'); if (Array.isArray(v)) ck = v; } catch (e) {}
+function autoHints() {
+  const L = res.live, A = res.liveArmed, b = res.bias;
+  const near = [...res.poiNow.demand, ...res.poiNow.supply].length;
+  return [
+    b ? `Hiện tại: ${b > 0 ? 'TĂNG → chỉ tìm Buy' : 'GIẢM → chỉ tìm Sell'}` : 'Hiện tại: chưa rõ xu hướng → đứng ngoài',
+    `Đang có ${near} vùng POI (xem bảng ở tab Biểu đồ)`,
+    A ? `Giá đã chạm ${A.zone}, đang theo dõi phản ứng` : L ? `Đã phản ứng tại ${L.zone}` : 'Giá chưa về POI',
+    L ? `${L.dir > 0 ? 'Buy' : 'Sell'} limit ${fmt(L.entry)} · SL ${fmt(L.initSl ?? L.sl)} · TP ${fmt(L.tp)} (R:R ${fmt(L.rr, 1)})` : 'Chưa có CHoCH + FVG',
+    L ? 'Sang tab "Tính khối lượng" để tính lot' : '—'
+  ];
+}
+function renderSteps() {
+  const h = autoHints();
+  $('steps').innerHTML = STEPS.map((s, i) => `<li class="${ck[i] ? 'ok' : ''}"><div><div class="row"><h3>${s[0]}</h3><label><input type="checkbox" id="ck${i}" data-i="${i}" ${ck[i] ? 'checked' : ''} style="width:auto"> Đã kiểm tra</label></div><p>${s[1]}</p><div class="auto muted">${h[i]}</div></div></li>`).join('');
+}
+$('steps').addEventListener('change', e => { const i = e.target.dataset.i; if (i == null) return; ck[i] = e.target.checked; try { localStorage.setItem('xau-ck', JSON.stringify(ck)); } catch (er) {} renderSteps(); });
+$('resetCk').addEventListener('click', () => { ck = ck.map(() => false); try { localStorage.setItem('xau-ck', JSON.stringify(ck)); } catch (e) {} renderSteps(); });
+
+function renderLive() {
+  const L = res.live, A = res.liveArmed;
+  if (L) {
+    $('liveCard').innerHTML = `<div class="setupcard"><div class="bar"><span class="pill ${L.dir > 0 ? 'bull' : 'bear'}">${L.dir > 0 ? 'BUY LIMIT' : 'SELL LIMIT'}</span><span class="muted">${L.status === 'filled' ? 'đã khớp' : 'đang chờ khớp'} · tín hiệu ${tstr(L.time)}</span></div>
+      <dl class="kv"><dt>POI</dt><dd>${L.zone}</dd><dt>CHoCH qua</dt><dd>${fmt(L.chochLevel)}</dd><dt>FVG</dt><dd>${fmt(L.fvg.bottom)} – ${fmt(L.fvg.top)}</dd><dt>Entry</dt><dd>${fmt(L.entry)}</dd><dt>Stop loss</dt><dd class="neg">${fmt(L.initSl ?? L.sl)}</dd><dt>Take profit (${L.tpKind})</dt><dd class="pos">${fmt(L.tp)}</dd><dt>R:R</dt><dd>${fmt(L.rr, 2)}</dd></dl></div>`;
+  } else if (A) {
+    $('liveCard').innerHTML = `<div class="setupcard"><span class="pill flat">Đang theo dõi</span><p class="note">Giá đã chạm vùng ${A.zone} lúc ${tstr(A.tapTime)}. Chờ ${ltfLabel} tạo CHoCH ${A.dir > 0 ? 'lên (đóng cửa trên đỉnh gần nhất)' : 'xuống (đóng cửa dưới đáy gần nhất)'} kèm FVG.</p></div>`;
+  } else $('liveCard').innerHTML = `<div class="setupcard"><span class="pill flat">Chưa có setup</span><p class="note">${res.bias ? 'Xu hướng đã rõ, chờ giá hồi về một vùng POI.' : 'Cấu trúc M15 chưa rõ, đứng ngoài.'}</p></div>`;
+}
+
+// ---- Position size ----
+function calcSize() {
+  const bal = +$('zBal').value, rp = +$('zRisk').value, e = +$('zEntry').value, sl = +$('zSL').value, tp = +$('zTP').value, cs = +$('zCS').value || 100, dir = +$('zDir').value;
+  const dist = Math.abs(e - sl), riskUsd = bal * rp / 100;
+  const lots = dist > 0 ? riskUsd / (dist * cs) : NaN;
+  const wrong = dir > 0 ? sl >= e : sl <= e;
+  const rr = dist > 0 && tp ? (dir > 0 ? tp - e : e - tp) / dist : NaN;
+  $('zOut').innerHTML = `<div><span class="lbl">Tiền rủi ro</span><div class="big">${fmt(riskUsd)} $</div></div>
+    <div><span class="lbl">Khoảng cách SL</span><div class="big">${fmt(dist)} $</div></div>
+    <div><span class="lbl">Khối lượng</span><div class="big">${isFinite(lots) ? fmt(Math.floor(lots * 100) / 100) : '–'} lot</div></div>
+    <div><span class="lbl">R:R · Lãi nếu chạm TP</span><div class="big">${fmt(rr, 2)} · ${isFinite(rr) ? fmt(rr * riskUsd) + ' $' : '–'}</div></div>`
+    + (wrong ? `<p class="callout" style="grid-column:1/-1;margin:0">SL đang nằm sai phía so với Entry cho lệnh ${dir > 0 ? 'Buy' : 'Sell'}.</p>` : '')
+    + (isFinite(lots) && lots < 0.01 ? `<p class="callout" style="grid-column:1/-1;margin:0">Khối lượng nhỏ hơn 0,01 lot. Với vốn này, SL đang quá rộng.</p>` : '');
+}
+['zBal', 'zRisk', 'zEntry', 'zSL', 'zTP', 'zCS', 'zDir'].forEach(id => $(id).addEventListener('input', calcSize));
+$('fromSetup').addEventListener('click', () => {
+  const s = res.live || res.setups.at(-1); if (!s) return;
+  $('zDir').value = s.dir; $('zEntry').value = s.entry.toFixed(2); $('zSL').value = (s.initSl ?? s.sl).toFixed(2); $('zTP').value = s.tp.toFixed(2); calcSize();
+});
+
+// ---- Journal ----
+let journal = [];
+try { journal = JSON.parse(localStorage.getItem('xau-journal') || '[]'); } catch (e) { journal = []; }
+const saveJ = () => { try { localStorage.setItem('xau-journal', JSON.stringify(journal)); return true; } catch (e) { return false; } };
+function renderJournal() {
+  if (!journal.length) $('jBody').innerHTML = '<tr><td colspan="9" class="muted" style="white-space:normal">Chưa có lệnh nào. Thêm lệnh đầu tiên bằng biểu mẫu bên cạnh sau khi bạn giao dịch (nên bắt đầu trên tài khoản demo).</td></tr>';
+  else $('jBody').innerHTML = journal.map((j, i) => `<tr><td>${j.date.replace('T', ' ')}</td><td class="${j.dir === 'Buy' ? 'pos' : 'neg'}">${j.dir}</td><td style="font-family:var(--f-body)">${j.poi}</td><td>${fmt(j.entry)}</td><td>${fmt(j.sl)}</td><td>${j.tp ? fmt(j.tp) : '–'}</td><td class="${j.r > 0 ? 'pos' : j.r < 0 ? 'neg' : ''}">${j.r > 0 ? '+' : ''}${fmt(j.r, 1)}</td><td style="font-family:var(--f-body);white-space:normal;min-width:160px">${escapeHtml(j.note || '')}</td><td><button type="button" data-del="${i}" aria-label="Xóa lệnh">Xóa</button></td></tr>`).join('');
+  const n = journal.length, w = journal.filter(j => j.r > 0).length, tot = journal.reduce((a, j) => a + j.r, 0);
+  $('jStats').innerHTML = n ? `<dt>Số lệnh</dt><dd>${n}</dd><dt>Tỷ lệ thắng</dt><dd>${fmt(w / n * 100, 0)}%</dd><dt>Tổng</dt><dd class="${tot >= 0 ? 'pos' : 'neg'}">${tot >= 0 ? '+' : ''}${fmt(tot, 1)}R</dd>` : '';
+}
+function escapeHtml(s) { return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+let pendingDel = null;
+$('jBody').addEventListener('click', e => {
+  const i = e.target.dataset.del; if (i == null) return;
+  if (pendingDel === i) { journal.splice(+i, 1); saveJ(); pendingDel = null; renderJournal(); }
+  else { pendingDel = i; e.target.textContent = 'Bấm lần nữa để xóa'; }
+});
+$('jForm').addEventListener('submit', e => {
+  e.preventDefault();
+  journal.unshift({ date: $('jDate').value, dir: $('jDir').value, poi: $('jPoi').value, entry: +$('jEntry').value, sl: +$('jSL').value, tp: +$('jTP').value || null, r: +$('jR').value, note: $('jNote').value.trim() });
+  const ok = saveJ(); renderJournal();
+  $('jMsg').textContent = ok ? 'Đã lưu.' : 'Đã thêm, nhưng trình duyệt không cho lưu lâu dài.';
+  ['jEntry', 'jSL', 'jTP', 'jR', 'jNote'].forEach(id => $(id).value = '');
+});
+(() => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000); $('jDate').value = d.toISOString().slice(0, 16); })();
+
+// ---- Tabs ----
+const tabs = [...document.querySelectorAll('nav.tabs button')];
+function openTab(name) {
+  tabs.forEach(b => b.setAttribute('aria-selected', b.dataset.tab === name));
+  ['chart', 'signals', 'plan', 'size', 'journal'].forEach(t => $('tab-' + t).hidden = t !== name);
+  try { localStorage.setItem('xau-tab', name); } catch (e) {}
+}
+tabs.forEach(b => b.addEventListener('click', () => openTab(b.dataset.tab)));
+$('sigBody').addEventListener('click', e => {
+  const tr = e.target.closest('tr[data-i]'); if (!tr) return;
+  selected = res.setups[+tr.dataset.i];
+  document.querySelectorAll('#sigBody tr').forEach(r => r.classList.toggle('sel', r === tr));
+  openTab('chart'); requestAnimationFrame(() => showSetup(selected));
+});
+
+// ---- Ticket: Entry / SL / TP ----
+let lastLiveKey = null, livePrice = null;
+function lotsFor(s) {
+  const bal = +$('zBal').value || 0, rp = +$('zRisk').value || 0, cs = +$('zCS').value || 100;
+  const dist = Math.abs(s.entry - (s.initSl ?? s.sl));
+  return dist > 0 ? Math.floor(bal * rp / 100 / (dist * cs) * 100) / 100 : NaN;
+}
+function renderTicket() {
+  const el = $('ticket');
+  if (!res) { el.innerHTML = ''; return; }
+  const L = res.live, A = res.liveArmed;
+  const s = L || res.setups.filter(x => x.outcome !== 'Hủy').at(-1) || null;
+  el.classList.toggle('on', !!L);
+  if (!s) {
+    el.innerHTML = `<div class="head"><div><span class="lbl">Lệnh theo chiến lược</span><div class="side">Chưa có setup</div></div>${A ? `<span class="pill flat">Giá đã chạm ${A.zone}, chờ CHoCH ${A.dir > 0 ? 'lên' : 'xuống'}</span>` : `<span class="pill flat">Chờ giá về vùng POI</span>`}</div>`;
+    return;
+  }
+  const isLive = !!L, dir = s.dir, sl = s.initSl ?? s.sl, risk = Math.abs(s.entry - sl), rew = Math.abs(s.tp - s.entry);
+  const status = isLive ? (L.status === 'filled' ? `<span class="pill warn">ĐANG CHẠY · khớp lúc ${tstr(L.fillTime)}</span>` : `<span class="pill warn">LỆNH CHỜ · ${dir > 0 ? 'Buy Limit' : 'Sell Limit'}</span>`)
+    : `<span class="pill ${s.outcome === 'TP' ? 'bull' : s.outcome === 'SL' ? 'bear' : 'flat'}">Setup gần nhất · đã kết thúc ${s.outcome === 'BE' ? 'hòa vốn' : 'tại ' + s.outcome}</span>`;
+  const beNote = isLive && L.beMoved ? `<span>SL đã dời về hòa vốn: <b>${fmt(L.sl)}</b></span>` : '';
+  const curDist = livePrice != null && isLive ? `<span>Giá hiện tại cách Entry: <b>${fmt(livePrice - s.entry)}</b></span>` : '';
+  const lots = lotsFor(s);
+  el.innerHTML = `
+    <div class="head">
+      <div><span class="lbl">${isLive ? 'Lệnh hiện tại' : 'Lệnh theo chiến lược'} · tín hiệu lúc ${tstr(s.time)} (giờ VN)</span>
+        <div class="side ${dir > 0 ? 'bull' : 'bear'}">${dir > 0 ? '▲ BUY' : '▼ SELL'} XAUUSD</div></div>
+      ${status}
+    </div>
+    <div class="levels">
+      <div class="lv en"><span class="lbl">Entry (${dir > 0 ? 'Buy' : 'Sell'} Limit)</span><span class="v">${fmt(s.entry)}</span><span class="d">giữa FVG ${fmt(s.fvg.bottom)} – ${fmt(s.fvg.top)}</span></div>
+      <div class="lv sl"><span class="lbl">Stop Loss</span><span class="v">${fmt(sl)}</span><span class="d">${dir > 0 ? '−' : '+'}${fmt(risk)} USD · ngoài ${dir > 0 ? 'đáy' : 'đỉnh'} vừa quét</span></div>
+      <div class="lv tp"><span class="lbl">Take Profit</span><span class="v">${fmt(s.tp)}</span><span class="d">${dir > 0 ? '+' : '−'}${fmt(rew)} USD · tại ${s.tpKind || 'POI'}</span></div>
+    </div>
+    <div class="facts">
+      <span>R:R <b>1 : ${fmt(s.rr, 2)}</b></span>
+      <span>POI vào lệnh <b>${s.zone}</b></span>
+      <span>CHoCH qua <b>${fmt(s.chochLevel)}</b></span>
+      <span>Khối lượng gợi ý <b>${isFinite(lots) ? fmt(lots) : '–'} lot</b> (${$('zRisk').value}% của ${fmt(+$('zBal').value, 0)} USD)</span>
+      <span>Dời SL về hòa vốn khi giá đạt <b>${fmt(s.entry + dir * risk)}</b></span>
+      ${beNote}${curDist}
+    </div>`;
+}
+
+// ---- Data + run ----
+function analyze() {
+  if (bars.length < 60) { res = null; renderTicket(); return; }
+  res = Engine.run(bars, params());
+  selected = null;
+  renderStrip(); renderPOI(); renderSignals(); renderSteps(); renderLive(); renderTicket(); drawCharts();
+  const key = res.live ? res.live.time + ':' + res.live.dir : null;
+  if (feed.on && key && key !== lastLiveKey) beep();
+  lastLiveKey = key;
+}
+['pRR', 'pTol', 'pSpread', 'pBuf', 'pPend', 'pBE'].forEach(id => $(id).addEventListener('change', analyze));
+['zBal', 'zRisk', 'zCS'].forEach(id => $(id).addEventListener('input', renderTicket));
+
+function setNote() {
+  $('ltfTitle').textContent = `${ltfLabel} · điểm vào`;
+  let h;
+  if (source === 'demo') h = '<b>Đang dùng dữ liệu mẫu</b> (giá mô phỏng, không phải giá thật). Bấm <b>Bật giá trực tiếp</b> để chạy với giá thật. Muốn có ngay lịch sử để phân tích: trong MT5 mở <b>View → Symbols → Bars</b>, chọn XAUUSD khung <b>M1</b>, <b>Request</b> rồi <b>Export Bars</b>, nhập file đó trước khi bật giá trực tiếp.';
+  else if (source === 'binance') h = `<b>Giá trực tiếp:</b> hợp đồng vàng XAUUSDT trên Binance Futures, cập nhật theo từng giây · ${bars.length.toLocaleString('en-US')} nến M1 (từ ${tstr(bars[0].time)}).${adj() ? ` Đã bù ${adj() > 0 ? '+' : ''}${fmt(adj())} USD để khớp giá sàn của bạn.` : ' Giá này có thể lệch vài USD so với OANDA/sàn của bạn: so với biểu đồ TradingView bên dưới rồi nhập số chênh vào ô <b>Bù chênh lệch</b>.'}`;
+  else if (source === 'live') h = `<b>Dữ liệu trực tiếp từ TradingView</b> · đã gom ${bars.length} nến M1 kể từ khi bật.` + (bars.length < 180 ? ` Chiến lược cần ít nhất khoảng 3 giờ dữ liệu để M15 hình thành cấu trúc. Nhập CSV từ MT5 để có lịch sử ngay.` : '');
+  else h = `<b>Dữ liệu:</b> ${source} · ${bars.length.toLocaleString('en-US')} nến ${ltfLabel}, từ ${tstr(bars[0].time)} đến ${tstr(bars.at(-1).time)} giờ VN${feed.on ? ' · đang nối thêm giá trực tiếp' : ''}.`;
+  $('srcNote').innerHTML = h;
+}
+function loadDemo() { stopFeed(); bars = Engine.demoBars(42); source = 'demo'; ltfLabel = 'M1'; setNote(); analyze(); }
+$('btnDemo').addEventListener('click', loadDemo);
+$('csv').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const txt = await f.text();
+  const off = (+$('srvOff').value || 0) * 3600;
+  let b = Engine.parseCSV(txt).map(x => ({ ...x, time: x.time - off }));
+  if (b.length < 300) { $('srcNote').innerHTML = `<b>Không đọc được file.</b> Chỉ nhận ${b.length} nến hợp lệ. Cần file CSV xuất từ MT5 với các cột ngày, giờ, open, high, low, close và ít nhất vài trăm nến M1.`; e.target.value = ''; return; }
+  const tf = Engine.timeframeSec(b);
+  if (tf > 300) { $('srcNote').innerHTML = `<b>Khung thời gian quá lớn.</b> File có nến ${Math.round(tf / 60)} phút. Chiến lược cần dữ liệu M1 (hoặc tối đa M5) để tìm điểm vào.`; e.target.value = ''; return; }
+  if (b.length > 30000) b = b.slice(-30000);
+  bars = b; source = f.name; ltfLabel = tf <= 60 ? 'M1' : 'M' + Math.round(tf / 60);
+  setNote(); analyze(); e.target.value = '';
+});
+
+// ---- Giá trực tiếp ----
+// Nguồn 1 (web thường, GitHub Pages): Binance Futures XAUUSDT, nến 1 phút + websocket, kèm biểu đồ TradingView OANDA:XAUUSD để đối chiếu.
+// Nguồn 2 (khi chạy trong ứng dụng Claude): đọc giá OANDA:XAUUSD trên trang TradingView qua trình duyệt của ứng dụng.
+const BN_REST = 'https://fapi.binance.com/fapi/v1/klines';
+const BN_WS = 'wss://fstream.binance.com/ws/xauusdt@kline_1m';
+const TV_URL = 'https://www.tradingview.com/symbols/XAUUSD/?exchange=OANDA';
+const SRV = 'host:claude_browser';
+const IN_CLAUDE = typeof window.claude !== 'undefined';
+const feed = { on: false, kind: null, ws: null, tab: null, timer: null, forming: null, lastPrice: null, lastChange: 0, fails: 0, retry: 0 };
+let audioCtx = null, rawBars = [];
+function beep() { try { audioCtx = audioCtx || new AudioContext(); const o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g).connect(audioCtx.destination); o.start(); o.stop(audioCtx.currentTime + 0.25); } catch (e) {} }
+function liveMsg(html) { $('liveNote').hidden = !html; $('liveNote').innerHTML = html || ''; }
+const adj = () => +$('pAdj').value || 0;
+const shiftBar = b => { const a = adj(); return { time: b.time, open: b.open + a, high: b.high + a, low: b.low + a, close: b.close + a }; };
+$('pAdj').addEventListener('change', () => {
+  try { localStorage.setItem('xau-adj', $('pAdj').value); } catch (e) {}
+  if (feed.kind === 'binance') { bars = rawBars.map(shiftBar); analyze(); }
+});
+try { const v = localStorage.getItem('xau-adj'); if (v != null) $('pAdj').value = v; } catch (e) {}
+
+function liveButton(state) {
+  const b = $('btnLive');
+  b.disabled = state === 'loading';
+  b.innerHTML = state === 'on' ? '<span class="dot live"></span> Đang nhận giá · Tắt' : state === 'loading' ? 'Đang kết nối…' : '● Bật giá trực tiếp';
+}
+
+async function startFeed() {
+  if (feed.on) { stopFeed(); setNote(); return; }
+  liveButton('loading'); liveMsg('');
+  try { await startBinance(); return; }
+  catch (e) {
+    if (IN_CLAUDE) { try { await startClaudeBrowser(); return; } catch (e2) { liveButton('off'); return feedError(e2); } }
+    liveButton('off');
+    liveMsg('<b>Không kết nối được nguồn giá Binance.</b> Mạng của bạn có thể đang chặn binance.com (một số nhà mạng hoặc quốc gia chặn). Thử đổi mạng/4G hoặc dùng file CSV từ MT5.');
+  }
+}
+
+// ---- Binance ----
+const kl = k => ({ time: k[0] / 1000, open: +k[1], high: +k[2], low: +k[3], close: +k[4] });
+async function startBinance() {
+  let all = [], end = Date.now();
+  for (let i = 0; i < 3; i++) {
+    const r = await fetch(`${BN_REST}?symbol=XAUUSDT&interval=1m&limit=1500&endTime=${end}`);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const a = await r.json();
+    if (!Array.isArray(a) || !a.length) break;
+    all = a.concat(all); end = a[0][0] - 1;
+  }
+  if (all.length < 100) throw new Error('no data');
+  const nowMs = Date.now();
+  const closed = all.filter(k => k[6] < nowMs), open = all.find(k => k[6] >= nowMs);
+  rawBars = closed.map(kl);
+  feed.kind = 'binance'; feed.on = true; feed.retry = 0;
+  bars = rawBars.map(shiftBar); source = 'binance'; ltfLabel = 'M1';
+  feed.forming = open ? shiftBar(kl(open)) : null;
+  liveButton('on'); $('sSrc').textContent = 'XAUUSDT';
+  setNote(); analyze();
+  if (feed.forming) onPrice(feed.forming.close, Math.floor(Date.now() / 1000), false);
+  openSocket();
+}
+function openSocket() {
+  try { feed.ws && feed.ws.close(); } catch (e) {}
+  const ws = new WebSocket(BN_WS); feed.ws = ws;
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    const k = m && m.k; if (!k) return;
+    feed.retry = 0;
+    const raw = { time: k.t / 1000, open: +k.o, high: +k.h, low: +k.l, close: +k.c };
+    if (k.x) {
+      const last = rawBars.at(-1);
+      if (!last || raw.time > last.time) { rawBars.push(raw); if (rawBars.length > 30000) rawBars.shift(); pushBar(shiftBar(raw)); }
+      feed.forming = null; setNote(); analyze();
+    } else {
+      feed.forming = shiftBar(raw);
+      onPrice(feed.forming.close, Math.floor(Date.now() / 1000), false);
+    }
+  };
+  ws.onclose = () => {
+    if (!feed.on || feed.kind !== 'binance' || feed.ws !== ws) return;
+    const wait = Math.min(30000, 1000 * 2 ** feed.retry++);
+    liveMsg(`Mất kết nối giá trực tiếp, đang kết nối lại sau ${Math.round(wait / 1000)} giây…`);
+    feed.timer = setTimeout(async () => {
+      // lấp các nến bị thiếu trong lúc mất kết nối
+      try {
+        const last = rawBars.at(-1);
+        const r = await fetch(`${BN_REST}?symbol=XAUUSDT&interval=1m&limit=500&startTime=${(last.time + 60) * 1000}`);
+        const a = await r.json(); const nowMs = Date.now();
+        for (const k of a) if (k[6] < nowMs) { const b = kl(k); rawBars.push(b); pushBar(shiftBar(b)); }
+        analyze();
+      } catch (e) {}
+      liveMsg(''); openSocket();
+    }, wait);
+  };
+}
+
+// ---- Trình duyệt của ứng dụng Claude → TradingView ----
+function parsePrice(text) {
+  const m = text.match(/XAUUSD\s*\n\s*([\d.,]+)\s*\n\s*USD/) || text.match(/\n([1-9]\d{0,2},\d{3}\.\d{2,3})\s*\n/);
+  return m ? parseFloat(m[1].replace(/,/g, '')) : NaN;
+}
+async function startClaudeBrowser() {
+  const mcp = await window.claude.use('mcp');
+  if (!mcp) throw { code: 'not_granted' };
+  const r = await mcp.callTool(SRV, 'preview_start', { url: TV_URL }, { cache: false });
+  const txt = (r.content || []).map(c => c.text || '').join('\n') + (typeof r.payload === 'string' ? r.payload : '');
+  const m = txt.match(/tabId[^\w]*([\w-]+)/); feed.tab = m ? m[1] : null;
+  if (source === 'demo') { bars = []; source = 'live'; ltfLabel = 'M1'; res = null; clearCharts(); }
+  feed.kind = 'tv'; feed.on = true; feed.fails = 0; feed.forming = null;
+  liveButton('on'); $('sSrc').textContent = 'TradingView · OANDA';
+  setNote(); renderTicket(); pollTV();
+}
+async function pollTV() {
+  if (!feed.on || feed.kind !== 'tv') return;
+  const mcp = await window.claude.use('mcp');
+  try {
+    const r = await mcp.callTool(SRV, 'get_page_text', feed.tab ? { tabId: feed.tab, max_chars: 400 } : { max_chars: 400 }, { cache: false });
+    const txt = (r.content || []).map(c => c.text || '').join('\n') || String(r.payload || '');
+    const p = parsePrice(txt);
+    if (isFinite(p) && p > 100) { onPrice(p, Math.floor(Date.now() / 1000), true); feed.fails = 0; }
+    else if (++feed.fails >= 5) liveMsg('<b>Không đọc được giá trên trang TradingView.</b> Trang có thể đang hiện hộp thoại (đăng nhập, cookie). Mở trình duyệt trong ứng dụng Claude (Ctrl+Shift+B) để kiểm tra.');
+  } catch (e) {
+    if (e && e.retryable && feed.fails++ < 3) { feed.timer = setTimeout(pollTV, (e.retryAfterMs || 3000) + Math.random() * 1000); return; }
+    stopFeed(); setNote(); return feedError(e);
+  }
+  feed.timer = setTimeout(pollTV, 3000);
+}
+function feedError(e) {
+  const c = e && e.code;
+  const map = {
+    not_granted: 'Trang không được cấp quyền dùng trình duyệt của ứng dụng Claude.',
+    server_not_connected: 'Không kết nối được trình duyệt của ứng dụng Claude. Mở trang trong <b>ứng dụng Claude trên máy tính</b>, hoặc mở bản trên GitHub Pages bằng trình duyệt thường.',
+    not_in_manifest: 'Bạn đã từ chối cho trang dùng trình duyệt. Mở menu <b>Quyền</b> của artifact để cho phép lại.',
+    approval_required: 'Cần bạn cho phép trang dùng trình duyệt. Bấm lại nút và chọn Cho phép.',
+    cancelled: 'Bạn đã hủy yêu cầu mở TradingView.',
+    blocked_by_policy: 'Tổ chức của bạn chặn tính năng này.'
+  };
+  liveMsg(`<b>Không lấy được giá.</b> ${map[c] || 'Nguồn giá không phản hồi. Thử bật lại sau ít phút.'}`);
+}
+
+function stopFeed() {
+  const wasTv = feed.kind === 'tv';
+  feed.on = false; clearTimeout(feed.timer);
+  try { feed.ws && feed.ws.close(); } catch (e) {} feed.ws = null;
+  if (wasTv && feed.forming) pushBar(feed.forming);
+  feed.forming = null; feed.kind = null;
+  liveButton('off'); $('sSrc').textContent = 'cuối';
+}
+function pushBar(b) {
+  const last = bars.at(-1);
+  if (last && b.time <= last.time) return;
+  bars.push(b);
+  if (bars.length > 30000) bars.shift();
+}
+
+// p: giá mới; buildBars: tự gom nến từ giá (nguồn TradingView)
+function onPrice(p, now, buildBars) {
+  const prev = feed.lastPrice;
+  if (prev !== p) feed.lastChange = now;
+  feed.lastPrice = p; livePrice = p;
+  const el = $('sPrice');
+  el.textContent = fmt(p);
+  el.classList.remove('flash-up', 'flash-dn');
+  if (prev != null && p !== prev) el.classList.add(p > prev ? 'flash-up' : 'flash-dn');
+  $('sTime').textContent = tstr(now) + ':' + String(now % 60).padStart(2, '0') + ' giờ VN';
+  if (now - feed.lastChange > 120) liveMsg('Giá chưa thay đổi hơn 2 phút. Thị trường vàng có thể đang đóng cửa (cuối tuần, hoặc 04:00–05:00 sáng giờ VN).');
+  else if (!$('liveNote').hidden && /2 phút/.test($('liveNote').textContent)) liveMsg('');
+  if (buildBars) {
+    const minute = Math.floor(now / 60) * 60;
+    let closed = false;
+    if (!feed.forming || feed.forming.time !== minute) {
+      if (feed.forming) { pushBar(feed.forming); closed = true; }
+      const o = feed.forming ? feed.forming.close : p;
+      feed.forming = { time: minute, open: o, high: Math.max(o, p), low: Math.min(o, p), close: p };
+    } else { const f = feed.forming; f.high = Math.max(f.high, p); f.low = Math.min(f.low, p); f.close = p; }
+    if (closed) { setNote(); analyze(); }
+  }
+  drawForming(p);
+  renderTicket();
+}
+function drawForming(p) {
+  const f = feed.forming; if (!sL || !f) return;
+  try {
+    if (!res) { const all = [...bars, f]; sL.setData(sh(all)); sH.setData(sh(Engine.aggregate(all, 900))); return; }
+    sL.update({ ...f, time: f.time + VN });
+    const t15 = Math.floor(f.time / 900) * 900, last15 = res.htf.at(-1);
+    if (last15 && last15.time === t15) sH.update({ time: t15 + VN, open: last15.open, high: Math.max(last15.high, f.high), low: Math.min(last15.low, f.low), close: p });
+    else if (!last15 || t15 > last15.time) sH.update({ time: t15 + VN, open: f.open, high: f.high, low: f.low, close: p });
+  } catch (e) {}
+}
+function clearCharts() { if (sH) { sH.setData([]); sL.setData([]); sH.setMarkers([]); sL.setMarkers([]); clearLines(sH, linesH); clearLines(sL, linesL); } }
+$('btnLive').addEventListener('click', startFeed);
+
+// ---- Biểu đồ TradingView (OANDA:XAUUSD) để đối chiếu ----
+function loadTVWidget() {
+  const box = $('tvBox');
+  if (IN_CLAUDE) { box.innerHTML = '<p class="note" style="padding:12px">Biểu đồ TradingView chỉ hiện khi mở trang qua link GitHub Pages trong trình duyệt thường.</p>'; return; }
+  const wrap = document.createElement('div'); wrap.className = 'tradingview-widget-container'; wrap.style.height = '100%';
+  const inner = document.createElement('div'); inner.className = 'tradingview-widget-container__widget'; inner.style.height = '100%';
+  const s = document.createElement('script');
+  s.src = 'https://s3.tradingview.com/external-embedding/embed-widget-advanced-chart.js'; s.async = true;
+  const dark = matchMedia('(prefers-color-scheme: dark)').matches;
+  s.textContent = JSON.stringify({ autosize: true, symbol: 'OANDA:XAUUSD', interval: '15', timezone: 'Asia/Ho_Chi_Minh', theme: dark ? 'dark' : 'light', style: '1', locale: 'vi_VN', allow_symbol_change: true, hide_side_toolbar: false, support_host: 'https://www.tradingview.com' });
+  s.onerror = () => { box.innerHTML = '<p class="note" style="padding:12px">Không tải được biểu đồ TradingView.</p>'; };
+  wrap.append(inner, s); box.innerHTML = ''; box.append(wrap);
+}
+
+makeCharts();
+let startTab = 'chart'; try { startTab = localStorage.getItem('xau-tab') || 'chart'; } catch (e) {}
+openTab(startTab);
+loadTVWidget();
+calcSize(); renderJournal();
+if (IN_CLAUDE) loadDemo();
+else { source = 'demo'; setNote(); $('srcNote').innerHTML = '<b>Đang tải giá trực tiếp…</b>'; startFeed().then(() => { if (!feed.on) { bars = Engine.demoBars(42); source = 'demo'; setNote(); analyze(); } }); }
+renderTicket();
+})();
+</script>
+
+</body>
+</html>
